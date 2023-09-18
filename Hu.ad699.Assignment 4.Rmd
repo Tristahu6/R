@@ -1,0 +1,218 @@
+---
+title: "Hu.ad699.Assignment 4"
+author: "Trista"
+date: "2023-08-06"
+output: html_document
+---
+
+```{r}
+#Task 1: Association rules
+library(arules)
+data("Groceries")
+class(Groceries)
+dim(Groceries) 
+
+```
+#1. 
+The class of “Groceries” is “transactions.”
+It contains 9835 rows and 169 columns. 
+
+```{r}
+#2. Item frequency barplot
+item_frequency <- itemFrequency(Groceries, type = "absolute")
+items_to_plot <- item_frequency[item_frequency > (0.065 * nrow(Groceries))]  
+barplot(items_to_plot, horiz = TRUE, col = "purple", main = "Item Frequency Barplot", cex.names = 0.5, las = 2)
+```
+
+
+
+
+```{r}
+#3.
+rules <- apriori(Groceries, parameter = list(supp = 0.0006, conf = 0.8))
+
+grocery_item <- "tropical fruit"
+lhs_rules <- subset(rules, subset = lhs %in% grocery_item)
+rhs_rules <- subset(rules, subset = rhs %in% grocery_item)
+
+# Show the first rule with the grocery item on the left-hand side
+inspect(lhs_rules[1])
+
+# Show the first rule with the grocery item on the right-hand side
+if (length(rhs_rules) > 0) {
+    inspect(rhs_rules[1])
+} else {
+    cat("No rules found with", grocery_item, "on the right-hand side.\n")
+}
+
+```
+#3.
+For the first rule ({tropical fruit, cereals} => {whole milk}), the confidence value is 0.9, meaning that 90% of the time, when tropical fruit and cereals were bought together, whole milk was also bought. The support value is 0.0009150991, which means that this rule stays true for about 0.09% of all transactions. The coverage is 0.001016777, meaning that 0.10% of the transactions contain tropical fruit and cereals. The lift is 3.522284, which indicates that the occurrence of whole milk in transactions with tropical fruit and cereals is 3.52 times higher than expected transaction volume if they were bought independently.
+
+For the second rule ({curd cheese, fruit/vegetable juice} => {tropical fruit}), the confidence is 0.8571429, which means that 85.7% of the time, when curd cheese, fruit/vegetable juice were bought together, tropical fruit were also bought. The support is 0.0006100661, which means that this rule is true for about 0.06% of all transactions. The coverage is 0.0007117438, which means 0.07% of the transactions contain curd cheese, fruit/vegetable juice. The lift is 8.168605, which indicates that the occurrence of tropical fruit in transactions with curd cheese, fruit/vegetable juice is 8.17 times higher than what would be expected if they were bought independently.
+
+As we can tell from the result, although both rules exhibit a substantial level of confidence, the support is modest, suggesting that these rules are applicable to a limited fraction of the total transactions. The lift is notably high, particularly in the case of the second rule, signifying a robust correlation between the items within their respective rules.
+
+#4.
+These rules provide insights into product associations and the likelihood of customers purchasing specific items in combination. Star Market can utilize this knowledge to cluster products like tropical fruit, and curd cheese/ fruit/vegetable juice together, enhancing marketing tactics, store arrangement, and generate more opportunities for product bundling or promotions to drive sales.
+
+
+```{r}
+#5. Generate a scatter plot
+library(arulesViz)
+selected_rules<-lhs_rules[1:3]
+inspect(selected_rules)
+
+plot(selected_rules, method = "scatter", measure=c("support","confidence"))
+```
+The scatter plot illustrates the confidence of three association rules on the y-axis, with support on the x-axis and lift represented by color intensity. In general, as the support and lift increase, the confidence tends to decrease, and vice versa. This suggests a trade-off between these rules’ confidence and support/lift. 
+
+
+```{r}
+#6. generate another plot
+plot(selected_rules, method="graph", engine="htmlwidget")
+```
+#6.
+This revised visualization provides a clearer depiction of the connections among the three association rules related to "tropical fruit" compared to the scatterplot. Based on rule one, it becomes evident that purchasing tropical fruit and cereals often accompanies the acquisition of whole milk. Similarly, the second rule shows that when a customer buys herbs and tropical fruit, they are also likely to buy whole milk. The third rule highlights a pattern where customers buying tropical fruit, cereals, and yogurt are inclined to also purchase whole milk. Notably, the first rule is distinguished by a more intense red circle, signifying a substantially higher likelihood compared to the other two rules.
+
+
+```{r}
+#Task 2: Classification Tree
+#1. data exploration
+library(ISLR)
+data(College)
+?College
+str(College)
+```
+
+#1.
+Based on the data description, Perc.alumni means percentage of alumni who donate.
+
+```{r}
+#2 Create variable "yield"
+College$yield <- round(College$Enroll / College$Accept *100,2)
+head(College)
+```
+
+
+```{r}
+#remove variable "Enroll" and "Accept"
+College <- College[,-c(3,4)]
+head(College)
+```
+```{r}
+#3. Calculate the median yield
+median_yield <- median(College$yield)
+
+# Convert yield into a factor
+College$yield <- factor(ifelse(College$yield >= median_yield, "high yield", "low yield"))
+head(College)
+class(College$yield)
+```
+
+```{r}
+#4. Set the random seed 
+set.seed(120)
+
+# Partition the data into training (60%) and validation (40%) sets
+train_indices <- sample(1:nrow(College), size=0.6 * nrow(College))
+train_data <- College[train_indices, ]
+validation_data <- College[-train_indices, ]
+```
+
+```{r}
+#5. build a tree model
+library(rpart)
+tree_model<-rpart(yield ~., data=train_data, method="class")
+```
+
+```{r}
+#6a. display a classification tree
+library(rpart.plot)
+rpart.plot(tree_model)
+```
+```{r}
+#6b. Try another display
+rpart.plot(tree_model, type=2, extra=101)
+```
+
+```{r}
+rpart.plot(tree_model, type=4, extra=106)
+```
+#6c. 
+The initial visualization of the tree model utilized default settings, revealing variable names and split conditions beneath the nodes. The subsequent visualization maintained the default split labels but introduced the count of observations within each node. The third visualization showcased distinct split labels for both left and right directions, encompassing all nodes and leaves, while also presenting the probability of the second class at each node. Personally, I favor the third plot due to its enhanced readability, and clearer split direction labels. 
+
+#7.
+The root node splits on the ‘Room.Board’ variable. The rule is if the 'Room.Board' value is less than 3825, the path leads to the left child node; otherwise, it proceeds to the right child node.
+
+The root node is significant because it’s the starting point of the classification process and it contributes the most substantial information gain.
+
+#8. 
+The model diagram does not encompass all input variables. Specifically, it incorporates solely "F.Undergrad", "Apps", and a subset of other variables that were deemed significant for minimizing impurity. Notably absent are variables like "Accept" and "Books," excluded due to their lack of meaningful impact on enhancing the model's predictive efficacy as evaluated by the algorithm's chosen splitting criterion.
+
+#9.
+When the 'Room.Board' value is below 3825 and the 'Outstate' value is less than 7010, the likelihood of the school having a high yield in terms of enrollment (surpassing the median of enrollment/acceptance rate) is approximately 8%.
+
+```{r}
+#10. overfit tree
+overfit_tree <-rpart(yield~., data=train_data, method = "class", cp=0, minsplit=2)
+rpart.plot(overfit_tree)
+```
+```{r}
+#11. 
+library(caret)
+tree_model_cp <- rpart(yield~., data=train_data, method = "class", xval=5, cp=0.00)
+options(scipen = 999)
+x<- printcp(tree_model_cp)
+```
+
+```{r}
+x<- data.frame(x)
+which.min(x$xerror)
+which.min(x$xstd)
+```
+```{r}
+plotcp(tree_model_cp)
+optimal_cp<- x$CP[which.min(x$xerror)]
+optimal_cp
+```
+
+The optimal complexity parameter is 0.004524887, which is the 9th CP on the cptable. It is also shown at the interception point of the dotted line and the cp plot. 
+
+```{r}
+#12. build the pruned tree model using the optimal cp
+tree_model_op<- rpart(yield~., data=train_data, method="class", cp=optimal_cp)
+
+```
+
+```{r}
+#13. plot the new tree model
+rpart.plot(tree_model_op, type=4, extra=106)
+```
+```{r}
+#14a. Create confusion matrices to assess the performance - train data
+pred_huge_tree<- predict(overfit_tree, train_data, type="class")
+confusionMatrix(pred_huge_tree, train_data$yield)
+```
+```{r}
+# Create confusion matrices to assess the performance - vaildation data
+pred_valid_huge<-predict(overfit_tree, validation_data, type="class")
+confusionMatrix(pred_valid_huge, validation_data$yield)
+```
+As evident from the confusion matrix, the overfit tree demonstrates flawless performance on the training set with a 100% accuracy. However, its accuracy on the validation set drops notably to 0.6945, highlighting a significant disparity.
+
+```{r}
+#14b. assess the pruned tree model - train data
+pred_train_op <- predict(tree_model_op, train_data, type="class")
+confusionMatrix(pred_train_op, train_data$yield)
+```
+```{r}
+# assess the pruned tree model - validation data
+pred_valid_op<-predict(tree_model_op, validation_data, type="class")
+confusionMatrix(pred_valid_op, validation_data$yield)
+```
+14b.
+As observed in the confusion matrix, the pruned tree exhibits an accuracy of 0.8691 on the training set and 0.7203 on the validation set, surpassing the overfit tree's 0.6945 accuracy on the unseen validation set. Also, the disparity between these accuracy values diminishes when comparing the pruned tree model to the larger tree.
+
+14c. 
+The disparity between accuracy in the training and validation sets tends to diminish when employing a pruned tree, owing to pruning's role in mitigating overfitting. This results in a reduction of training set accuracy while elevating validation set accuracy. The pruned tree model, characterized by enhanced generalization, performs better on new, unseen data. Conversely, an overfitted model captures noise within the training set, yielding high training accuracy but limited applicability to the validation/unseen data. Pruning the tree contributes to a more equilibrium-seeking model, adept at delivering favorable performance with fresh, uncharted validation data.
