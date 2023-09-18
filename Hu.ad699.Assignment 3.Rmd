@@ -1,0 +1,371 @@
+---
+title: "Hu.ad699 Assignment 3"
+author: "Trista"
+date: "2023-07-30"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+## R Markdown
+
+```{r}
+library(Ecdat)
+#1. Load the "Clothing" dataset
+data("Clothing")
+```
+
+```{r}
+#2. 
+has_na <- sum(is.na(Clothing))
+has_na #0
+```
+There's no NA value in the dataset.
+
+```{r}
+#3
+str(Clothing)
+```
+3a: 
+sales is a numeric variables. Based on the above str() result, sales is not yet a factor. 
+
+```{r}
+#3a: transfer sales to a factor 
+Clothing$sales <- factor(ifelse(Clothing$sales >= mean(Clothing$sales), "higher volume", "lower volume"))
+table(Clothing$sales)
+```
+```{r}
+#3b.
+Clothing <- subset(Clothing, select = -tsales)
+str(Clothing)
+```
+
+
+```{r}
+#4. partitioning
+set.seed(120)  
+train_index <- sample(1:nrow(Clothing), 0.6 * nrow(Clothing))
+train_set <- Clothing[train_index, ]
+validation_set <- Clothing[-train_index, ]
+str(train_set)
+```
+
+```{r}
+#5. Select all numeric variables
+num_var <- c("margin", "nown", "nfull", "npart", 
+             "naux", "hoursw", "hourspw", "inv1", 
+             "inv2", "ssize")
+
+# Perform the two sample t-tests on numeric variables
+t_test_result <- sapply(num_var, function(var) t.test(
+  train_set[train_set$sales == "higher volume", var], 
+  train_set[train_set$sales == "lower volume", var])
+  $p.value)
+
+t_test_result
+
+# Find variables that show significant difference (p-value less than 0.05)
+insig_var <- num_var[t_test_result > 0.05]
+insig_var
+
+# Remove insignificant variables from the dataset
+train_set <- train_set[, !names(train_set) %in% insig_var]
+validation_set <- validation_set[, !names(validation_set) %in% insig_var]
+head(validation_set)
+head(train_set)
+```
+
+5a.
+Irrelevant or redundant variables adds noise and increases the dimensionality of the feature space. High-dimensional data can lead to the "curse of dimensionality," where the performance of k-NN deteriorates due to increased computation time and memory requirements. When irrelevant variables are added to a k-NN model, overfitting can occur, causing the model to perform well on training data but badly on unseen data. Eliminating pointless variables aids in avoiding overfitting and noises. 
+```{r}
+#6. a new men’s clothing store named "Trista's store"
+Trista_store <- data.frame(margin = runif(1, min(train_set$margin), max(train_set$margin)), 
+                           nfull=runif(1, min(train_set$nfull), max(train_set$nfull)),
+                           hoursw=runif(1, min(train_set$hoursw), max(train_set$hoursw)),
+                           hourspw=runif(1, min(train_set$hourspw), max(train_set$hourspw)),
+                           ssize=runif(1, min(train_set$ssize), max(train_set$ssize)),
+                           start=runif(1, min(train_set$start), max(train_set$start)))
+Trista_store
+```
+
+
+```{r}
+#7. 
+library(caret)
+preproc <- preProcess(train_set[, -1], method = c("center", "scale"))
+train_set_norm <- predict(preproc, train_set[, -1])
+validation_set_norm <- predict(preproc, validation_set[, -1])
+validation_set_norm
+```
+
+
+```{r}
+
+#8.KNN classification
+library(FNN)
+knn_result <- knn(train = train_set_norm, test = validation_set_norm, cl = train_set$sales, k = 7)
+Trista_store_norm <- predict(preproc, Trista_store[1:6])
+Trista_store_norm
+Trista_store_knn <- knn(train_set_norm, Trista_store_norm, cl = train_set$sales, k = 7)
+Trista_store_knn
+```
+Trista's store lands in lower volume of sales. 
+
+```{r}
+# Extract the nearest neighbor indices
+nearest_neighbor_indices <- attr(Trista_store_knn, "nn.index")[1, ]
+# Get the outcome classes of the 7 nearest neighbors from the training dataset
+nearest_neighbor_outcome_classes <- train_set$sales[nearest_neighbor_indices]
+nearest_neighbor_outcome_classes
+
+```
+The outcome classes for my store’s 7 nearest neighbors are 7 lower volume.  
+
+```{r}
+#9.
+library(caret)
+# Create a data frame to store k-values and their corresponding accuracy results
+k_accuracy_df <- data.frame(k = seq(1, 14, 1), accuracy = rep(0, 14))
+
+# Loop through different k-values (1 to 14)
+for (i in 1:14) {
+  # Train k-NN model on the training set with the current k-value
+  knn_model <- knn(train = train_set_norm, test = validation_set_norm,
+                   cl = train_set$sales, k = i)
+  k_accuracy_df[i, 2] <- confusionMatrix(knn_model, validation_set$sales)$overall[1]
+}
+k_accuracy_df
+```
+
+The highest accuracy can be obtained with k=9, so the optimal k value is 9.
+
+```{r}
+#10. create a scatterplot with the various k values
+ggplot(k_accuracy_df, aes(x = k, y = accuracy)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = seq(1, 14, 1)) +
+  labs(title = "Accuracy vs k value (ggplot)", x = "k value", y = "Accuracy")
+```
+
+
+```{r}
+#11. re-run KNN
+knn_result2 <- knn(train = train_set_norm, test = validation_set_norm, cl = train_set$sales, k = 9)
+Trista_store_knn2 <- knn(train_set_norm, Trista_store_norm, cl = train_set$sales, k = 9)
+Trista_store_knn2
+
+# Extract the nearest neighbor indices
+nearest_neighbor_indices2 <- attr(Trista_store_knn2, "nn.index")[1, ]
+nearest_neighbor_indices2
+# Get the outcome classes of the 7 nearest neighbors from the training dataset
+nearest_neighbor_outcome_classes2 <- train_set$sales[nearest_neighbor_indices2]
+nearest_neighbor_outcome_classes2
+```
+
+
+The model now predicts lower volume, same result as the first round's result.  
+The outcome classes for each of your nearest neighbors are 9 lower volume. 
+
+```{r}
+#Naive Bayes
+#1. 
+setwd("C:/Users/Trista Hu/OneDrive/BU ABA Study Summer/AD699 Data Mining Summer/Assignment 3")
+movie_awards <- read.csv("movie_awards.csv")
+head(movie_awards)
+str(movie_awards)
+
+```
+
+2a-i.
+The "Title" variable is the movie title, and "Year" is the release year. These two variables are unique for each movie and will not provide valuable information for predicting whether a movie will win awards. The title alone doesn't necessarily correlate with awards, and the year might not have a direct impact on the award-winning potential of a movie. Therefore, these two variables are useless in the prediction. 
+
+
+```{r}
+#2b. Convert character variables to factors
+character_cols <- sapply(movie_awards, is.character)
+character_cols
+movie_awards[character_cols] <- lapply(movie_awards[character_cols], as.factor)
+str(movie_awards)
+```
+
+2c."Runtime", "Critic.Score", and "Box.Office" are currently seen as numeric. 
+
+2c-i.
+Equal width binning divides the range of the data into a fixed number of equally sized intervals or bins, but the number of observations in each bin may vary. Equal frequency binning divides the observations into bins, each with about the same number of observations. 
+
+Equal frequency binning is preferable when dealing with data that is not normally distributed or contains outliers. It can help to ensure that each bin contains a similar number of observations, minimize the impact of outliers and create a more balanced representation of the data distribution.
+
+```{r}
+#2c-ii. 
+equal_frequency_binning <- function(data, num_bins) {
+  # Calculate quantiles for equal-frequency binning
+  quantiles <- quantile(data, probs = seq(0, 1, length.out = num_bins + 1))
+  bins <- cut(data, breaks = quantiles, labels = FALSE, include.lowest = TRUE)
+  bins <- factor(bins)
+  return(bins)
+}
+
+# Number of desired bins
+num_bins <- 5
+
+# Perform equal-frequency binning on the variables using the custom function
+movie_awards$Runtime <- equal_frequency_binning(movie_awards$Runtime, num_bins)
+table(movie_awards$Runtime)
+
+movie_awards$Critic.Score <- equal_frequency_binning(movie_awards$Critic.Score, num_bins)
+table(movie_awards$Critic.Score)
+
+movie_awards$Box.Office <- equal_frequency_binning(movie_awards$Box.Office, num_bins)
+table(movie_awards$Box.Office)
+
+```
+
+```{r}
+#3. 
+library(ggplot2)
+# Create proportional barplots for each input variable
+input_vars <- colnames(movie_awards)[colnames(movie_awards) != "Awards"]
+for (var in input_vars) {
+  p <- ggplot(movie_awards, aes(x = .data[[var]], fill = Awards)) +
+    geom_bar(position = "fill") +
+    labs(title = paste("Proportional Barplot for", var),
+         x = var, y = "Proportion") +
+    theme_minimal()
+  print(p)
+}
+
+```
+!Note: For some reason, the system shows error when use ggplot here in the Markdown environment, however, the code works when it was run in regular R Script. I attached a word file showing the code and result from the R Script specifically for this part.  
+
+3b.
+Looking at the bar plots, the “rating” has less variation of proportion sizes across the levels of the input variable; therefore we consider this variable have NO strong predictive power in the naive Bayes model.
+
+
+```{r}
+#3b-i. Drop the "Rating" variable from the dataframe
+movie_awards <- subset(movie_awards, select = -c(Rating))
+head(movie_awards)
+```
+
+
+```{r}
+#4.
+set.seed(120)
+
+# Data partitioning (60% training set, 40% validation set)
+train_indices <- sample(1:nrow(movie_awards), 0.6 * nrow(movie_awards))
+train_set <- movie_awards[train_indices, ]
+validation_set <- movie_awards[-train_indices, ]
+str(train_set)
+```
+
+
+```{r}
+#5. 
+library(e1071)
+
+# Select the relevant columns for the model
+input_vars <- colnames(movie_awards)[!colnames(movie_awards) %in% c("Title", "Year")]
+train_data <- movie_awards[, input_vars]
+head(train_data)
+
+# Build the Naive Bayes model
+nb_model <- naiveBayes(Awards ~ ., data = train_data)
+
+# Print the summary of the Naive Bayes model
+print(nb_model)
+```
+
+
+```{r}
+#6 Make predictions on the training and validation datasets
+train_pred <- predict(nb_model, train_set)
+valid_pred <- predict(nb_model, validation_set)
+
+# Create confusion matrices for training and validation predictions
+confusion_train <- confusionMatrix(train_pred, train_set$Awards)
+confusion_valid <- confusionMatrix(valid_pred, validation_set$Awards)
+confusion_train
+
+# Display the confusion matrices
+cat("Confusion Matrix for Training Data:\n")
+print(confusion_train$table)
+
+cat("\nConfusion Matrix for Validation Data:\n")
+print(confusion_valid$table)
+
+accuracy_train <- confusion_train$overall["Accuracy"]
+accuracy_valid <- confusion_valid$overall["Accuracy"]
+
+cat("\nAccuracy for Training Data:", round(accuracy_train, 4), "\n")
+cat("Accuracy for Validation Data:", round(accuracy_valid, 4), "\n")
+```
+Accuracy for Training Data: 0.7461 
+Accuracy for Validation Data: 0.7292
+So the accuracy for Training Data is slightly higher than validation data. 
+
+```{r}
+#7 naive rule: find most frequent class
+most_freq_class_train <- names(which.max(table(train_set$Awards)))
+most_freq_class_train
+```
+In classification, the naive rule refers to a simple prediction strategy where all instances are assigned to the most prevalent class in the training data. It assumes that the class distribution in the training data reflects the true class distribution in the population, without considering any features or relationships between features and the outcome.
+
+If naive rule were in use, all the records in the training set would be classified as the frequent class, which is Won Awards
+
+```{r}
+#7a. Calculate naive rule accuracy for train set
+naive_rule_accuracy_train <- sum(train_set$Awards == most_freq_class_train) / nrow(train_set)
+naive_rule_accuracy_train
+# Calculate naive rule accuracy for validation set (proportion of most frequent class)
+most_freq_class_validation <- names(which.max(table(validation_set$Awards)))
+naive_rule_accuracy_validation <- sum(validation_set$Awards == most_freq_class_validation) / nrow(validation_set)
+naive_rule_accuracy_validation
+# Percentage difference between model accuracy and naive rule accuracy
+accuracy_diff_train <- (accuracy_train - naive_rule_accuracy_train) * 100
+accuracy_diff_valid <- (accuracy_valid - naive_rule_accuracy_validation) * 100
+
+cat("Percentage Difference - Training Set:", accuracy_diff_train, "%\n")
+cat("Percentage Difference - Validation Set:", accuracy_diff_valid, "%\n")
+
+```
+Percentage difference between model accuracy and naive rule accuracy is:
+Training Set: 15.44799 % higher than naive rule accuracy
+Validation Set: 13.04012 % higher than naive rule accuracy
+```{r}
+#8. Select one movie from the training set (Movie "Ted")
+chosen_movie <- subset(train_set, Title == "Ted")
+chosen_movie
+
+```
+8a.
+Yes, the chosen movie won awards. 
+```{r}
+#8b. Predict whether the chosen movie will win awards
+chosen_movie_pred <- predict(nb_model, chosen_movie)
+cat("Model Prediction for the Chosen Movie:")
+print(chosen_movie_pred)
+
+```
+The model predict movie "Ted" would won awards. 
+
+```{r}
+#8c. Generate the probability that the chosen movie will win awards
+chosen_movie_prob <- predict(nb_model, chosen_movie, type = "raw")
+cat("Probability that the Chosen Movie Will Win Awards:")
+print(chosen_movie_prob)
+```
+the probability that your chosen movie will win awards is 0.9445689 (94.46%)
+
+```{r}
+#8d.
+#P(W | R = 3, C = 4, B = 5, D = Domestic) =
+p<- (0.20675325 * 0.24155844 * 0.30701299 * 0.6316883 * 0.5945028)/((0.20675325 * 0.24155844 * 0.30701299 * 0.6316883 * 0.5945028)+(0.22162986*0.12261995*0.04265042*0.7189642*0.4054972))
+p
+```
+
+
+```{r}
+```
+
