@@ -1,0 +1,337 @@
+
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(dplyr)
+```
+
+```{r}
+#2. set the working directory and Read CSV files
+setwd("C:/Users/Trista Hu/OneDrive/BU ABA Study Summer/AD699 Data Mining Summer/Assignment 1")
+allservicecalls <- read.csv("allservicecalls.csv")
+View(allservicecalls)
+```
+
+```{r}
+#2a. Call the str() function on the dataset
+str(allservicecalls)
+```
+2b. The str() function shows the structure of the dataset, including the number, names, and the data type of the variables, giving us a quick overview of the data. 
+
+There are 603236 rows of observations/records, and 17 columns/variables.
+```{r}
+#3. Filter dataset to include only my District - District 2
+colnames(allservicecalls)[13] <- "Council_District"
+district2 <- allservicecalls %>% filter(Council_District==2)
+dim(district2)
+```
+3a: After filtering out my district, the total number of records is now reduced to 82329 rows with 17 variables.
+
+```{r}
+#4a: Count the total number of NAs in the dataframe
+sum(is.na(district2)) 
+```
+4a:
+No, there's no NA in my dataframe. 
+
+sum(is.na()) can sum up the total number of NA values in the data frame. In this case the result shows 0, so there's no NA values in the dataframe
+```{r}
+#4b. Calculate the percentage of complete cases in the dataframe
+complete_cases_percentage <- sum(complete.cases(district2)) / nrow(district2) * 100
+complete_cases_percentage
+```
+4b. 
+Based on the result, 100% of the rows in the dataframe are complete cases. 
+
+A complete case refers to a row in a dataframe that has no missing values across all its columns, meaning it contains valid and non-missing data for all variables or attributes in the dataset.
+```{r}
+#4c. Convert any blank cells in the dataframe into NAs
+district2[district2 == ""] <- NA
+```
+
+
+```{r}
+#4d. count NA again
+sum(is.na(district2))
+```
+4d. There are 8797 NAs in the dataframe after convert all blank cells into NAs. 
+```{r}
+#4e. 
+complete_cases_percentage2 <- sum(complete.cases(district2)) / nrow(district2) * 100
+complete_cases_percentage2
+```
+4e. 89% of the rows in the dataframe are complete cases after convert all blank cells into NAs. 
+
+In R, blank fields are not automatically recognized as missing values. They are treated as valid values, even if they represent an absence of data. Therefore, the complete.cases() function does not count blank fields as missing values and considers rows with blank fields as complete cases. After converting the blank fields to NA values, the complete.cases() function will then correctly identify those rows as incomplete, therefore, causing the decrease on the percentage of complete cases. 
+```{r}
+library(naniar)
+#4f. Generate the missing values summary table
+missing_table <- miss_var_summary(district2)
+print(missing_table)
+```
+```{r}
+#4g. relationship between the Closed Date value for each observation whose Case Status is Open
+value_counts <- district2 %>% filter(CaseStatus=="Open")%>%
+  count(CLOSEDDATETIME, na.rm = FALSE)
+value_counts
+```
+4g. All cases with "Open" Status are with "NA" value in CLOSEDDATETIME. Per data description, the "CLOSEDDATETIME" is the date and time that the case/request was closed.  If blank, the request has not been closed as of the Report Ending Date, thus the case is still open as of the Reporting Ending Date. Therefore, these two columns are closely related. 
+```{r}
+#5a
+str(district2)
+```
+5a. the OPENEDDATETIME and CLOSEDDATETIME variables both are characters, as indicated from above results. 
+```{r}
+#5b. convert each of these two variables to a ‘Date’ data type
+district2$OPENEDDATETIME <- as.Date(district2$OPENEDDATETIME,format = "%m/%d/%Y")
+print(class(district2$OPENEDDATETIME))
+district2$CLOSEDDATETIME <- as.Date(district2$CLOSEDDATETIME, format = "%m/%d/%Y")
+print(class(district2$CLOSEDDATETIME))
+```
+Per checked, the type has been successfully converted to "Date" 
+
+```{r}
+#5c. create a column "duration" based on the difference between closed and opened dates
+district2 <- district2 %>%
+  mutate(duration =CLOSEDDATETIME - OPENEDDATETIME)
+str(district2)
+```
+
+Duration has been created as the last column. 
+
+```{r}
+#5d. city service requests in San Antonio, TX initiated on my birthday (Aug 29)
+#Filter the dataset to include only rows with initiation date on August 29th
+requests_aug29 <- district2[format(district2$OPENEDDATETIME, "%m-%d") == "08-29", ]
+dim(requests_aug29)
+```
+5d-i. 228 city service requests in San Antonio, TX were initiated on my birthday (Aug 29)
+
+```{r}
+#5d. count and identify the most common category for these requests
+value_counts2 <- requests_aug29 %>%
+  count(Category)
+value_counts2
+```
+5d-i. Based on the result, property Maintenance is the most common category for these requests.
+
+6a. Council District should be considered a categorical variable. 
+The Council District number from where the issue was reported represents a distinct set of discrete categories. These categories do not have inherent numerical meaning or a quantitative relationship. Instead, they serve as identifiers representing specific geographic or administrative divisions within a larger jurisdiction. In this case, Council Districts have a finite and predefined number of categories. Each district represents a separate and exclusive subdivision within the jurisdiction, and there are no inherent numerical relationships or order between them. 
+
+
+```{r}
+#6b. calculate the percentage
+percentage_311 <- (sum(district2$SourceID == "311 Mobile App", na.rm = TRUE)/ nrow(district2)) * 100
+print(percentage_311)
+```
+6b. 4.6% of all the 311 city service requests in my dataframe came in through the 311 Mobile App
+
+```{r}
+#6c. percentage of all the 311 city service requests in your dataframe belong to Graffiti 
+value_counts_311 <- district2 %>%filter(SourceID=="311 Mobile App")%>%
+  count(Category)
+percentage_graffiti <- (value_counts_311[value_counts_311$Category == "Graffiti", "n"] / sum(value_counts_311$n)) * 100
+
+print(percentage_graffiti)
+
+```
+6c. 0.13% of all the 311 city service requests in the data frame belong to the Graffiti category
+```{r}
+#6d. count the number of unique "REASON NAME" values
+count_unique_reasons <- length(unique(district2$REASONNAME))
+print(count_unique_reasons)
+```
+6d. There are 24 unique REASON NAME values.
+```{r}
+#7. Remove the following column from the dataframe: CASEID
+district3 <- district2 %>% select(-CASEID)
+str(district3)
+```
+Per checked, "CASEID" has been removed from the dataset  
+
+```{r}
+#8. create a new column called season
+district4 <- district3 %>%
+  mutate(season = case_when(
+    quarter(OPENEDDATETIME) == 1 ~ "Winter",
+    quarter(OPENEDDATETIME) == 2 ~ "Spring",
+    quarter(OPENEDDATETIME) == 3 ~ "Summer",
+    quarter(OPENEDDATETIME) == 4 ~ "Fall",
+    TRUE ~ NA_character_
+  ))
+
+str(district4)
+```
+Per checked, "season" has been added as the last variable. 
+
+```{r}
+library(ggplot2)
+
+#9. construct a barplot showing the counts of city service requests for four seasons
+plot1<- ggplot(district4, aes(x = season, fill= Category)) +
+  geom_bar() +
+  labs(title = "Counts of City Service Requests by Season",
+       x = "Season",
+       y = "Count")  
+plot1
+```
+9a. There are much more requests in Spring and Winter than in Fall or Summer. Weather conditions can have a significant impact on the types of issues that arise and require city services. In Spring, there could be an increase in requests related to cleaning up after winter storms or property maintenance requests caused by the changing weather. In Winter, requests for snow clearance, ice control, or weather-related maintenance/infrastructure meeds might be more common. The demands and challenges posed by specific weather conditions can result in an increase in service requests during Spring and Winter. 
+
+```{r}
+#10a. filter so that only rows with the 6 most common Category types remain
+value_counts3<- district4 %>% count(Category)%>%
+  arrange(desc(n))
+value_counts3
+# Select the 6 most common Category types
+top_categories <- value_counts3$Category[1:6]
+top_categories
+
+# Filter the dataframe to include only rows with the top categories
+district5 <- district4 %>% filter(Category %in% top_categories)
+dim(district5)
+```
+10a. There are 80891 rows in the current dataframe
+
+And the most common category types are: 
+[1] "Property Maintenance"      "Solid Waste Services"     
+[3] "Animals"                   "Streets & Infrastructure" 
+[5] "Traffic Signals and Signs" "Parks"
+
+```{r}
+#10b. Create a barplot of counts for the six most common Category types
+ggplot(district5, aes(x = fct_infreq(Category), fill = Category)) +
+  geom_bar() +
+  labs(title = "Counts for the 6 Most Common Category Types",
+       x = "Category",
+       y = "Count") +
+  scale_fill_brewer(palette = "Set2") +
+  coord_flip() +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+10c. The chart depicts the counts for these six most common Category types. Color your bars in a increasing ordered by size. "Property Maintenance" is one of the two categories with the highest frequencies, followed by "Solid Waste Services". There is a significant gap between these two categories and the rest, indicating that they occur much more frequently. Specifically, the count of cases for "Property Maintenance" is more than 10 times higher than the count of cases for "Parks".
+```{r}
+#11. Count the occurrences of each reason name
+reason_counts4 <- district5 %>%
+  count(REASONNAME) %>%
+  arrange(desc(n))
+reason_counts4
+
+# Select the top 6 reason names
+top_reasons <- reason_counts4$REASONNAME[1:6]
+top_reasons
+
+# Filter the dataframe to include only rows with the top reason names
+district6 <- district5 %>%
+  filter(REASONNAME %in% top_reasons)
+str(district6)
+dim(district6)
+```
+11a. This new dataset includes 77385 rows. 
+
+The most common types of REASONNAME:
+[1] "Code Enforcement"   "Waste Collection"   "Field Operations"  
+[4] "Streets"            "Miscellaneous"      "Traffic Operations"
+
+```{r}
+#11b. create faceted barplots showing totals for SOURCEID based on REASONNAME
+plot_faceted <- ggplot(district6, aes(x = SourceID)) +
+   geom_bar() +
+  labs(title = "Totals for SOURCEID Faceted by REASONNAME",
+       x = "SOURCEID",
+       y = "Total") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_wrap(~ REASONNAME, scales = "fixed")
+
+print(plot_faceted)
+```
+11b-i.Overall, "Code Proactive Calls" and "Constituent Calls" are the two major source methods for reporting cases. Among the constituent calls, the majority are for waste collection and field operation cases. However, the usage of the "311 Mobile App" for reporting cases is very low for all Reported Reasons.
+
+From the diagram, it can be observed that all "Code Proactive Calls" are related to "Code Enforcement" cases. There are no instances of Code Proactive Calls associated with reason categories other than Code Enforcement. This unusual pattern warrants further investigation.
+```{r}
+#12. create a histogram that depicts the distribution of the duration variable
+plot_histogram <- ggplot(district6, aes(x = duration)) +
+  geom_histogram(fill = "lightblue", color = "black", bins = 20) +
+  labs(title = "Distribution of Duration",
+       x = "Duration",
+       y = "Frequency") +
+  coord_cartesian(xlim = c(-50, 700))
+plot_histogram
+```
+12a. The majority (~90%) of the cases are solved within 50 days, indicating a relatively efficient resolution process. Furthermore, there is a significant increase in frequency for cases resolved within 0-40 days compared to the duration category ranked second. This pattern suggests that a large proportion of cases are resolved relatively quickly. As the duration increases, the frequency of cases decreases, indicating a longer resolution time for a smaller proportion of cases. 
+```{r}
+#12b. create a histogram with 'fill' variable based on 'REASONNAME'
+plot_histogram_fill <- ggplot(district6, aes(x = duration, fill = REASONNAME)) +
+  geom_histogram(color = "black", bins = 20) +
+  labs(title = "Distribution of Duration by REASONNAME",
+       x = "Duration",
+       y = "Frequency")+
+  coord_cartesian(xlim = c(-50, 700))
+print(plot_histogram_fill)
+```
+12b. The majority of cases, regardless of their reasons, can be resolved within 40 days, suggesting a relatively efficient resolution process. However, cases reported as Code Enforcement or Field Operations may require more time to be resolved, indicating complex issues or potential resource limitations. On the other hand, cases related to Streets, Traffic Operations, or Waste Collection can generally be resolved within a normal or shorter timeframe. 
+```{r}
+#13.
+typename_counts <- district6 %>%
+  count(TYPENAME) %>%
+  arrange(desc(n))
+typename_counts
+
+# Select the top 6 typename values
+top_typenames <- typename_counts$TYPENAME[1:6]
+top_typenames
+```
+
+the six most common TYPENAME values are:
+[1] "Overgrown Yard/Trash"                        
+[2] "No Pickup"                                   
+[3] "Overgrown Yard/Trash (Alley Way Maintenance)"
+[4] "Animals(Aggressive Non-Critical)"            
+[5] "Animals(Stray Animal)"                       
+[6] "Illegal Parking (Front-Side Yard Parking)" 
+```{r}
+
+
+#13. Filter the dataframe to include only rows with the top typename values
+district7 <- district6 %>%
+  filter(TYPENAME %in% top_typenames)
+
+dim(district7)
+
+```
+
+
+```{r}
+#13a.create a proportional fill barplot
+plot_proportional_fill <- ggplot(district7, aes(x = Category, fill = TYPENAME)) +
+  geom_bar(position = "fill") +
+  labs(title = "Proportional Fill Barplot",
+       x = "CATEGORY",
+       y = "Proportion") + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+print(plot_proportional_fill)
+```
+13b. What stands out as interesting or unusual is that 100% of the reported cases for the "Solid Waste Services" category are related to "No Pickup" issues. This observation raises speculation that there might be specific challenges or inefficiencies in the solid waste collection process, leading to a high number of cases related to missed or skipped pickups. Possible factors contributing to this could include scheduling issues, resource constraints, or communication gaps between residents and waste management services. Further investigation and analysis would be necessary to determine the root causes and develop strategies for improvement.
+```{r}
+library(leaflet)
+#14. Create the map
+m <- leaflet() %>% addTiles() %>% addCircles(lng=-98.5 , lat=29.4)
+m
+```
+```{r}
+#15.
+m2 <- leaflet() %>%
+  addTiles() %>%
+  addCircles(lng=-98.5 , lat=29.4) %>%
+  addProviderTiles(providers$Stamen.Toner)
+m2
+```
+```{r}
+m3 <- leaflet() %>%
+  addTiles() %>%
+  addCircles(lng = -98.5, lat = 29.4) %>%
+  addProviderTiles(providers$Stamen.Watercolor)
+m3
+
+```
+
