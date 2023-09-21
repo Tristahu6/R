@@ -1,47 +1,24 @@
 
-
-```{r}
 library(tidyverse)
 library(lubridate)
 library(dplyr)
-```
 
-```{r}
-#2. set the working directory and Read CSV files
-setwd("C:/Users/Trista Hu/OneDrive/BU ABA Study Summer/AD699 Data Mining Summer/Assignment 1")
+#2. set the working directory, read CSV files and filter out my District - District 2 
+setwd("C:/Users/Trista Hu/allservicecalls")
 allservicecalls <- read.csv("allservicecalls.csv")
 View(allservicecalls)
-```
-
-```{r}
-#2a. Call the str() function on the dataset
 str(allservicecalls)
-```
-2b. The str() function shows the structure of the dataset, including the number, names, and the data type of the variables, giving us a quick overview of the data. 
-
-There are 603236 rows of observations/records, and 17 columns/variables.
-```{r}
-#3. Filter dataset to include only my District - District 2
 colnames(allservicecalls)[13] <- "Council_District"
 district2 <- allservicecalls %>% filter(Council_District==2)
 dim(district2)
-```
-3a: After filtering out my district, the total number of records is now reduced to 82329 rows with 17 variables.
 
-```{r}
-#4a: Count the total number of NAs in the dataframe
+# check NA
 sum(is.na(district2)) 
-```
-4a:
-No, there's no NA in my dataframe. 
 
-sum(is.na()) can sum up the total number of NA values in the data frame. In this case the result shows 0, so there's no NA values in the dataframe
-```{r}
-#4b. Calculate the percentage of complete cases in the dataframe
+# Calculate the percentage of complete cases in the dataframe
 complete_cases_percentage <- sum(complete.cases(district2)) / nrow(district2) * 100
 complete_cases_percentage
-```
-4b. 
+
 Based on the result, 100% of the rows in the dataframe are complete cases. 
 
 A complete case refers to a row in a dataframe that has no missing values across all its columns, meaning it contains valid and non-missing data for all variables or attributes in the dataset.
