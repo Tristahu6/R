@@ -1,7 +1,15 @@
-# R
+
+# Single Algorithom Exercise in R
+## Contents
+
+1. [Data Exploration & Visualization](https://github.com/Tristahu6/R/blob/main/Data%20Exploration%20%26%20Visualization.vf.Rmd)
+2. [Simple Linear Regression & Multiple Linear Regression](https://github.com/Tristahu6/R/blob/main/Simple%20Linear%20Regression%20%26%20MLR.Rmd)
+3. [Classification](https://github.com/Tristahu6/R/blob/main/Classification.Rmd)
+4. [Association Rules](https://github.com/Tristahu6/R/blob/main/Association%20rules.Rmd)
+
 # NYC Real Estate Project
 
-## Business Case Analysis: New York City Real Estate
+## [Business Case Analysis: New York City Real Estate](https://github.com/Tristahu6/R/blob/main/Project%20NYC%20Real%20Estate%20Analysis.R)
 
 ### Problem Statement
 A real estate brokerage firm is considering opening a new office in the NYC market, but is faced with the challenge of deciding whether it's a viable decision given the variety of properties and sales trends and which location to invest. The dataset contains 1.76 million entries with transactions for both RESIDENTIAL_UNITS and COMMERCIAL_UNITS in all neighborhoods in NYC.
@@ -10,7 +18,7 @@ A real estate brokerage firm is considering opening a new office in the NYC mark
 - Evaluate the service demand in potential neighborhoods.
 - Assess the expected growth of the real estate market.
 - Determine whether the business can operate profitably with an acceptable level of revenue.
-- Develop a sound plan of action and recommendations for whether to open up an office in a chosen neighborhood based on the above factors.
+- Develop a sound plan of action and recommendations for whether to open up an office in a chosen neighborhood based on operational efficiency and resource planning (personnel and office cost)
 
 ## Project Details
 
@@ -39,8 +47,3 @@ A real estate brokerage firm is considering opening a new office in the NYC mark
   - 0 <= the employee number (an integer) <= 3.
   - Operating budget/quarter <= $45,000.
 - The model estimates an NPV of up to $3,204,473 for the eight-quarter forecast period, with an ROI of 822% achievable by applying the optimal solution.
-
-## Key Benefits
-- **Informed Decision-Making:** Provided recommendations based on the findings. Meets the project objective and enables businesses to make informed decisions based on real estate demand trends, reducing the risk of picking the low-demand neighborhood.
-- **Increased Sales and Revenue:** Provides insights into customer demand, preferences, and trends, leading to increased sales and revenue for the organization by identifying growth opportunities.
-- **Operational Efficiency:** Improves operational efficiency and resource planning (personnel and office cost), reducing costs and increasing profitability and competitiveness.
